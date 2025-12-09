@@ -12,18 +12,26 @@ function App() {
 
   // GitHub URL을 Raw URL로 변환
   const convertToRawUrl = (githubUrl) => {
+    // 이미 Raw URL인 경우
     if (githubUrl.includes('raw.githubusercontent.com')) {
       return githubUrl;
     }
     
+    // .git으로 끝나는 리포지토리 URL인 경우 에러
+    if (githubUrl.endsWith('.git') || githubUrl.includes('.git/')) {
+      throw new Error('리포지토리 URL이 아닌 파일 URL을 입력해주세요.\n예: https://github.com/username/repo/blob/main/file.js');
+    }
+    
     // GitHub 파일 URL을 Raw URL로 변환
+    // 형식: https://github.com/owner/repo/blob/branch/path/to/file
     const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)/);
     if (match) {
       const [, owner, repo, branch, path] = match;
       return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
     }
     
-    return githubUrl;
+    // 매칭되지 않는 경우 에러
+    throw new Error('올바른 GitHub 파일 URL 형식이 아닙니다.\n예: https://github.com/username/repo/blob/main/file.js\n또는: https://raw.githubusercontent.com/username/repo/branch/file.js');
   };
 
   // 파일 내용에서 API 키 검색
@@ -89,13 +97,25 @@ function App() {
     setResults([]);
 
     try {
-      // Raw URL로 변환
-      const rawUrl = convertToRawUrl(url);
+      // Raw URL로 변환 (에러 발생 가능)
+      let rawUrl;
+      try {
+        rawUrl = convertToRawUrl(url.trim());
+      } catch (urlError) {
+        setError(urlError.message);
+        setIsLoading(false);
+        return;
+      }
       
       // 파일 내용 가져오기
       const response = await fetch(rawUrl);
       if (!response.ok) {
-        throw new Error('파일을 가져올 수 없습니다. URL을 확인해주세요.');
+        if (response.status === 404) {
+          throw new Error('파일을 찾을 수 없습니다. URL과 파일 경로를 확인해주세요.');
+        } else if (response.status === 403) {
+          throw new Error('파일 접근이 거부되었습니다. Private 리포지토리일 수 있습니다.');
+        }
+        throw new Error(`파일을 가져올 수 없습니다. (상태 코드: ${response.status})`);
       }
 
       const content = await response.text();

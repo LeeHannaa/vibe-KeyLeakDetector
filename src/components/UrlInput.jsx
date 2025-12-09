@@ -16,7 +16,9 @@ const UrlInput = ({ url, setUrl, isLoading }) => {
         disabled={isLoading}
       />
       <p className="url-hint">
-        GitHub 레포지토리의 파일 URL 또는 Raw 파일 URL을 입력하세요
+        ⚠️ 리포지토리 URL(.git)이 아닌 <strong>파일 URL</strong>을 입력하세요<br/>
+        예: https://github.com/username/repo/blob/main/file.js<br/>
+        또는: https://raw.githubusercontent.com/username/repo/branch/file.js
       </p>
     </div>
   );
